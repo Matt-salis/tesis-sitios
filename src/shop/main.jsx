@@ -260,7 +260,7 @@ function Shop() {
         </section>
       </main>
       <footer>
-        <div className="wrap">Bazar Uno</div>
+        <div className="wrap">Desarrollado por ZigZag</div>
       </footer>
 
       {selected && (

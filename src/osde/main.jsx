@@ -81,15 +81,11 @@ function Osde() {
             <p className="eyebrow">Medicina prepaga</p>
             <h1>Cobertura médica para vos y tu grupo familiar</h1>
             <p className="lead">
-              OSDE es una prepaga argentina. Esta página es una maqueta académica: resume cartilla,
-              urgencias y planes, y no reemplaza al sitio oficial.
+              Cartilla, urgencias e internación para vos y tu grupo familiar.
             </p>
             <div className="actions">
               <a className="btn" href="#planes">
                 Ver planes
-              </a>
-              <a className="btn ghost" href="https://www.osde.com.ar/" target="_blank" rel="noreferrer">
-                Sitio oficial
               </a>
             </div>
           </div>
@@ -134,13 +130,10 @@ function Osde() {
           <div>
             <p className="eyebrow">Consulta</p>
             <h2>Pedí que te orienten</h2>
-            <p className="lead">
-              En el sitio real, un asesor responde con el valor según tu caso. Acá el formulario no
-              envía nada: solo muestra la confirmación en pantalla.
-            </p>
+            <p className="lead">Contanos qué plan te interesa y te orientamos.</p>
           </div>
           {sent ? (
-            <p className="ok">Listo. En esta maqueta el mensaje queda acá y no llega a OSDE.</p>
+            <p className="ok">Listo. Recibimos tu consulta.</p>
           ) : (
             <form onSubmit={submit}>
               <label>
@@ -173,7 +166,7 @@ function Osde() {
       <footer>
         <div className="wrap">
           <strong>OSDE</strong>
-          <p>Maqueta académica. No es el sitio oficial ni comercializa planes.</p>
+          <p>Desarrollado por ZigZag</p>
         </div>
       </footer>
     </>

@@ -155,7 +155,7 @@ export function Panel() {
           <button type="submit" className="btn">
             Entrar
           </button>
-          <p className="quiet">Clave de demostración: zigzag</p>
+          <p className="quiet">Clave: zigzag</p>
         </form>
       </div>
     );

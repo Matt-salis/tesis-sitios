@@ -40,7 +40,7 @@ export function Shell() {
               De la <em>dispersión</em> nace nuestro <em>método</em>.
             </p>
           </div>
-          <p className="credit">Identidad de Camila Tatiana Arruguete. Marca ficticia, en proceso.</p>
+          <p className="credit">Desarrollado por ZigZag</p>
         </div>
       </footer>
     </div>
