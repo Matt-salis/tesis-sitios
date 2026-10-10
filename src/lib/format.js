@@ -17,6 +17,10 @@ export function formatDate(value) {
   }).format(new Date(year, month - 1, day));
 }
 
+export function plainTitle(value) {
+  return String(value || "").replace(/\*([^*]+)\*/g, "$1");
+}
+
 export function paragraphs(body) {
   return (body || "")
     .split(/\n\s*\n/)

@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { SEED } from "../data/seed";
 
-const CMS_KEY = "zigzag-cms-v1";
+const CMS_KEY = "zigzag-cms-v2";
 const CmsContext = createContext(null);
 
 function readJson(key, fallback) {

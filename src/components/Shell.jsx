@@ -36,7 +36,9 @@ export function Shell() {
         <div className="wrap foot-grid">
           <div>
             <strong>ZigZag</strong>
-            <p>De la dispersión nace nuestro método.</p>
+            <p>
+              De la <em>dispersión</em> nace nuestro <em>método</em>.
+            </p>
           </div>
           <p className="credit">Identidad de Camila Tatiana Arruguete. Marca ficticia, en proceso.</p>
         </div>

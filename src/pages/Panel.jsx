@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { fileToCover } from "../lib/image";
-import { formatDate } from "../lib/format";
+import { formatDate, plainTitle } from "../lib/format";
 import { useCms } from "../state/store";
 
 const AUTH_KEY = "zigzag-admin";
@@ -85,7 +85,7 @@ export function Panel() {
   }
 
   function removePost(post) {
-    const sure = window.confirm(`¿Borrar “${post.title}”?`);
+    const sure = window.confirm(`¿Borrar “${plainTitle(post.title)}”?`);
     if (!sure) return;
     cms.deletePost(post.id);
     setMessage("Publicación borrada.");
@@ -202,6 +202,7 @@ export function Panel() {
                   onChange={(event) => setDraft({ ...draft, title: event.target.value })}
                 />
               </label>
+              <p className="quiet">Para destacar una palabra en Avallon, encerrala entre asteriscos: *desorden*.</p>
               <label>
                 Sección
                 <select
@@ -355,7 +356,7 @@ export function Panel() {
                         <li key={post.id}>
                           {post.image ? <img src={post.image} alt="" /> : <span className="ph" />}
                           <div>
-                            <strong>{post.title}</strong>
+                            <strong>{plainTitle(post.title)}</strong>
                             <span>{formatDate(post.date)}</span>
                           </div>
                           <button type="button" className="textish" onClick={() => startEdit(post)}>

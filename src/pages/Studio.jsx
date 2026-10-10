@@ -1,4 +1,5 @@
 import { Link, useSearchParams } from "react-router-dom";
+import { Accent } from "../components/Accent";
 import { asset } from "../lib/asset";
 import { formatDate } from "../lib/format";
 import { useCms } from "../state/store";
@@ -62,15 +63,21 @@ export function Studio() {
         </div>
       ) : (
         <div className="posts">
-          {posts.map((post) => {
+          {posts.map((post, index) => {
             const owner = cms.sections.find((item) => item.id === post.sectionId);
             return (
-              <article key={post.id} className="post-card">
+              <article key={post.id} className={index % 2 ? "post-card flip" : "post-card"}>
                 <Link to={`/nota/${post.id}`}>
-                  <img src={post.image || asset("isotipo.png")} alt="" />
+                  <figure className="shot">
+                    <span className="sq-gold" aria-hidden="true" />
+                    <span className="sq-red" aria-hidden="true" />
+                    <img src={post.image || asset("isotipo.png")} alt="" />
+                  </figure>
                   <div>
                     <p className="kicker">{owner?.name || "Sin sección"}</p>
-                    <h2>{post.title}</h2>
+                    <h2>
+                      <Accent text={post.title} />
+                    </h2>
                     <p>{post.excerpt}</p>
                     <time dateTime={post.date}>{formatDate(post.date)}</time>
                   </div>
