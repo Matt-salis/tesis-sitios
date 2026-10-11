@@ -24,24 +24,42 @@ const COVERAGE = [
   },
 ];
 
-const PLANS = [
+const COMPARE = [
   {
-    name: "210",
-    text: "El plan de entrada. Consultas, estudios e internación, con cartilla propia y cobertura en el país.",
+    feature: "Cartilla",
+    values: ["Cerrada y acotada", "Más prestadores", "Amplia", "Amplia", "La más amplia"],
   },
   {
-    name: "310",
-    text: "Más prestadores y reintegros más altos. Es el plan que suelen elegir empresas y pymes.",
+    feature: "Consultas y estudios",
+    values: ["En cartilla", "En cartilla", "En cartilla", "En cartilla", "En cartilla"],
   },
   {
-    name: "410",
-    text: "Suma beneficios como odontología, óptica y un margen mayor de reintegros sobre el 310.",
+    feature: "Internación",
+    values: ["Incluida", "Incluida", "Incluida", "Incluida", "Incluida"],
   },
   {
-    name: "510",
-    text: "La cobertura más amplia de la línea: internación en suite y los reintegros más altos.",
+    feature: "Habitación",
+    values: ["Compartida", "Individual", "Individual", "Individual", "Suite"],
+  },
+  {
+    feature: "Reintegros",
+    values: ["Bajos", "Medios", "Altos", "Más altos", "Los más altos"],
+  },
+  {
+    feature: "Odontología",
+    values: ["Básica", "Básica", "Más cobertura", "Más cobertura", "Más cobertura"],
+  },
+  {
+    feature: "Óptica",
+    values: ["No incluye", "Limitada", "Incluida", "Incluida", "Incluida"],
+  },
+  {
+    feature: "Maternidad",
+    values: ["Incluida", "Incluida", "Incluida", "Incluida", "Incluida"],
   },
 ];
+
+const PLAN_NAMES = ["210", "310", "410", "450", "510"];
 
 function Osde() {
   const [sent, setSent] = useState(false);
@@ -89,11 +107,13 @@ function Osde() {
               </a>
             </div>
           </div>
-          <img
-            className="hero-photo"
-            src={asset("osde/hero.jpg")}
-            alt="Médica en consulta con una paciente"
-          />
+          <div className="hero-frame">
+            <img
+              className="hero-photo"
+              src={asset("osde/hero.jpg")}
+              alt="Médica en consulta con una paciente"
+            />
+          </div>
         </section>
 
         <section className="band" id="cobertura">
@@ -110,19 +130,32 @@ function Osde() {
 
         <section className="wrap block" id="planes">
           <p className="eyebrow">Planes</p>
-          <h2>210, 310, 410 y 510</h2>
+          <h2>Compará 210, 310, 410, 450 y 510</h2>
           <p className="lead">
-            También existe el 450. La cuota no es un número fijo: depende de la edad, del grupo
-            familiar y de si derivás aportes de obra social.
+            La cuota depende de la edad, del grupo familiar y de si derivás aportes. El cuadro
+            muestra cómo cambia la cobertura de un plan al siguiente.
           </p>
-          <div className="plans">
-            {PLANS.map((plan) => (
-              <article key={plan.name}>
-                <span>OSDE</span>
-                <strong>{plan.name}</strong>
-                <p>{plan.text}</p>
-              </article>
-            ))}
+          <div className="table-wrap">
+            <table className="compare">
+              <thead>
+                <tr>
+                  <th>Cobertura</th>
+                  {PLAN_NAMES.map((name) => (
+                    <th key={name}>{name}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {COMPARE.map((row) => (
+                  <tr key={row.feature}>
+                    <th scope="row">{row.feature}</th>
+                    {row.values.map((value, index) => (
+                      <td key={PLAN_NAMES[index]}>{value}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </section>
 

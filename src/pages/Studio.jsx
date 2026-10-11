@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Accent } from "../components/Accent";
+import { WorkPreview } from "../components/WorkPreview";
 import { asset } from "../lib/asset";
 import { formatDate } from "../lib/format";
 import { useCms } from "../state/store";
@@ -11,6 +13,7 @@ export function Studio() {
   const known = cms.sections.some((section) => section.id === requested);
   const active = requested !== "todas" && known ? requested : "todas";
   const section = cms.sections.find((item) => item.id === active);
+  const [preview, setPreview] = useState(null);
   const posts = cms.posts
     .filter((post) => active === "todas" || post.sectionId === active)
     .slice()
@@ -22,7 +25,7 @@ export function Studio() {
         <div>
           <p className="kicker">Estudio</p>
           <h1>
-            Publicaciones por <em>sección</em>
+            Trabajos por <em>sección</em>
           </h1>
           <p className="lede">
             {section?.blurb ||
@@ -30,7 +33,7 @@ export function Studio() {
           </p>
         </div>
         <Link className="btn" to="/panel">
-          Cargar publicaciones
+          Cargar proyectos
         </Link>
       </header>
 
@@ -67,7 +70,7 @@ export function Studio() {
             const owner = cms.sections.find((item) => item.id === post.sectionId);
             return (
               <article key={post.id} className={index % 2 ? "post-card flip" : "post-card"}>
-                <Link to={`/nota/${post.id}`}>
+                <button type="button" className="post-open" onClick={() => setPreview(post)}>
                   <figure className="shot">
                     <span className="sq-gold" aria-hidden="true" />
                     <span className="sq-red" aria-hidden="true" />
@@ -81,12 +84,17 @@ export function Studio() {
                     <p>{post.excerpt}</p>
                     <time dateTime={post.date}>{formatDate(post.date)}</time>
                   </div>
-                </Link>
+                </button>
               </article>
             );
           })}
         </div>
       )}
+      <WorkPreview
+        post={preview}
+        section={cms.sections.find((item) => item.id === preview?.sectionId)}
+        onClose={() => setPreview(null)}
+      />
     </div>
   );
 }

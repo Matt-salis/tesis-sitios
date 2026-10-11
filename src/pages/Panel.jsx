@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { fileToCover } from "../lib/image";
+import { clearMedia, kindOf, removeBlob, saveBlob } from "../lib/media";
 import { formatDate, plainTitle } from "../lib/format";
 import { useCms } from "../state/store";
 
@@ -20,6 +21,7 @@ function blank(sectionId) {
     excerpt: "",
     body: "",
     image: "",
+    files: [],
     date: today(),
   };
 }
@@ -81,12 +83,13 @@ export function Panel() {
 
   function startEdit(post) {
     setFormError("");
-    setDraft({ ...post });
+    setDraft({ ...post, files: post.files || [] });
   }
 
-  function removePost(post) {
+  async function removePost(post) {
     const sure = window.confirm(`¿Borrar “${plainTitle(post.title)}”?`);
     if (!sure) return;
+    await Promise.all((post.files || []).map((file) => removeBlob(file.id).catch(() => {})));
     cms.deletePost(post.id);
     setMessage("Publicación borrada.");
   }
@@ -124,15 +127,53 @@ export function Panel() {
     cms.savePost(draft);
     setDraft(null);
     setFormError("");
-    setMessage("Publicación guardada. Ya se ve en el estudio.");
+    setMessage("Proyecto guardado. Ya se ve en el portfolio.");
   }
 
-  function resetDemo() {
+  async function resetDemo() {
     const sure = window.confirm("Esto borra lo que cargaste y vuelve a las publicaciones de ejemplo.");
     if (!sure) return;
+    await clearMedia().catch(() => {});
     cms.reset();
     setDraft(null);
     setMessage("Volviste al contenido de ejemplo.");
+  }
+
+  async function onMedia(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !draft) return;
+    const kind = kindOf(file);
+    if (!kind) {
+      setFormError("Subí un video MP4 o WebM, un GIF o un FBX.");
+      return;
+    }
+    if (file.size > 45 * 1024 * 1024) {
+      setFormError("El archivo pesa más de 45 MB.");
+      return;
+    }
+    const id = `${kind}-${Math.random().toString(36).slice(2, 8)}`;
+    setBusy(true);
+    setFormError("");
+    try {
+      await saveBlob(id, file);
+      setDraft((current) => ({
+        ...current,
+        files: [...(current.files || []), { id, name: file.name, kind }],
+      }));
+    } catch {
+      setFormError("No se pudo guardar el archivo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeMedia(id) {
+    await removeBlob(id).catch(() => {});
+    setDraft((current) => ({
+      ...current,
+      files: (current.files || []).filter((file) => file.id !== id),
+    }));
   }
 
   if (!authed) {
@@ -168,7 +209,7 @@ export function Panel() {
           <p className="kicker">Panel del estudio</p>
           <h1>Secciones y publicaciones</h1>
           <p className="lede">
-            Cada nota queda en una sección, con imagen, y se publica en el estudio. Se guarda en
+            Cada proyecto queda en una sección. Podés sumar imagen, video, GIF o FBX. Se guarda en
             este navegador.
           </p>
         </div>
@@ -256,7 +297,25 @@ export function Panel() {
                   Quitar imagen
                 </button>
               )}
-              {busy && <p className="quiet">Procesando imagen…</p>}
+              <label className="drop media-drop">
+                <span>Sumar video, GIF o FBX</span>
+                <input type="file" accept="video/mp4,video/webm,image/gif,.fbx" onChange={onMedia} />
+              </label>
+              {(draft.files || []).length > 0 && (
+                <ul className="media-list">
+                  {draft.files.map((file) => (
+                    <li key={file.id}>
+                      <span>
+                        {file.kind.toUpperCase()} · {file.name}
+                      </span>
+                      <button type="button" className="textish" onClick={() => removeMedia(file.id)}>
+                        Quitar
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {busy && <p className="quiet">Procesando archivo…</p>}
               {formError && <p className="form-error">{formError}</p>}
               <button type="submit" className="btn" disabled={busy || cms.sections.length === 0}>
                 Guardar publicación

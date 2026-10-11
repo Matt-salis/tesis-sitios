@@ -1,51 +1,64 @@
-import { StrictMode, useEffect, useMemo, useState } from "react";
+import { StrictMode, createContext, useContext, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
+import { HashRouter, Link, NavLink, Route, Routes, useParams } from "react-router-dom";
 import { asset } from "../lib/asset";
 import "./shop.css";
+
+const CATEGORIES = [
+  { id: "hogar", name: "Hogar", text: "Lo que se queda en la casa." },
+  { id: "cocina", name: "Cocina", text: "Mesa, timer y lo de todos los días." },
+  { id: "trabajo", name: "Trabajo", text: "Escritorio y concentración." },
+  { id: "viaje", name: "Viaje", text: "Lo que sale con vos." },
+];
 
 const PRODUCTS = [
   {
     id: "auriculares",
+    category: "trabajo",
     name: "Auriculares inalámbricos",
     detail: "Bluetooth, estuche de carga y 20 horas de uso.",
     description:
       "Pensados para el día entero: música, llamadas y el viaje de vuelta. Las almohadillas cierran bien sin apretar, y el estuche recarga mientras los guardás.",
     specs: ["Bluetooth 5.3", "20 horas con el estuche", "Micrófono para llamadas", "Plegado plano"],
     price: 45900,
-    image: asset("bazar/auriculares.jpg"),
+    images: [asset("bazar/auriculares.jpg"), asset("bazar/escritorio.jpg")],
   },
   {
     id: "lampara",
+    category: "trabajo",
     name: "Lámpara de escritorio",
     detail: "Brazo flexible y luz cálida para leer o estudiar.",
     description:
       "Una luz pareja para el escritorio. El brazo se acomoda sin herramientas y la base se queda quieta aunque el cable tire un poco.",
     specs: ["Luz cálida", "Brazo articulado", "Base estable", "Cable de 1,5 m"],
     price: 27500,
-    image: asset("bazar/lampara.jpg"),
+    images: [asset("bazar/lampara.jpg"), asset("bazar/escritorio.jpg")],
   },
   {
     id: "mochila",
+    category: "viaje",
     name: "Mochila urbana",
     detail: "Compartimento para notebook de hasta 15 pulgadas.",
     description:
       "Entra la notebook, el cargador y lo del día. El bolsillo de adelante queda a mano y las correas van acolchadas.",
     specs: ["Notebook hasta 15 pulgadas", "Bolsillo frontal", "Correas acolchadas", "Tela resistente"],
     price: 38200,
-    image: asset("bazar/mochila.jpg"),
+    images: [asset("bazar/mochila.jpg"), asset("bazar/entrada.jpg")],
   },
   {
     id: "botella",
+    category: "hogar",
     name: "Botella térmica",
     detail: "Acero, 500 ml, mantiene la temperatura varias horas.",
     description:
       "Acero de una pieza, tapa a rosca y boca ancha para lavarla fácil. Mantiene el frío a la mañana y el calor si la cargás con té.",
     specs: ["500 ml", "Acero inoxidable", "Tapa a rosca", "Aislación de doble pared"],
     price: 16400,
-    image: asset("bazar/botella.jpg"),
+    images: [asset("bazar/botella.jpg"), asset("bazar/living.jpg")],
   },
   {
     id: "reloj",
+    category: "cocina",
     name: "Reloj de cocina",
     detail: "Timer magnético, pantalla grande y alarma clara.",
     description:
@@ -53,16 +66,33 @@ const PRODUCTS = [
     specs: ["Imán trasero", "Cuenta hasta 99 minutos", "Alarma audible", "Dial de alto contraste"],
     badge: "2x1",
     price: 12800,
-    image: asset("bazar/reloj.jpg"),
+    images: [asset("bazar/reloj.jpg"), asset("bazar/cocina.jpg")],
+  },
+];
+
+const SLIDES = [
+  {
+    image: asset("bazar/living.jpg"),
+    kicker: "Hogar",
+    title: "Cosas simples para la casa",
+    to: "/categoria/hogar",
+  },
+  {
+    image: asset("bazar/cocina.jpg"),
+    kicker: "Cocina",
+    title: "La mesa, lista",
+    to: "/categoria/cocina",
+  },
+  {
+    image: asset("bazar/escritorio.jpg"),
+    kicker: "Trabajo",
+    title: "Luz para quedarse",
+    to: "/categoria/trabajo",
   },
 ];
 
 const CART_KEY = "bazar-cart-v1";
-
-function linePrice(product, qty) {
-  if (product.id === "reloj") return Math.ceil(qty / 2) * product.price;
-  return product.price * qty;
-}
+const ShopContext = createContext(null);
 
 function money(value) {
   return new Intl.NumberFormat("es-AR", {
@@ -72,18 +102,32 @@ function money(value) {
   }).format(value);
 }
 
-function ProductCard({ product, onOpen, onAdd }) {
+function linePrice(product, qty) {
+  if (product.id === "reloj") return Math.ceil(qty / 2) * product.price;
+  return product.price * qty;
+}
+
+function categoryOf(id) {
+  return CATEGORIES.find((item) => item.id === id);
+}
+
+function useShop() {
+  return useContext(ShopContext);
+}
+
+function ProductCard({ product }) {
+  const shop = useShop();
   return (
     <article className="card">
-      <button type="button" className="card-open" onClick={() => onOpen(product)}>
+      <button type="button" className="card-open" onClick={() => shop.setPreview(product)}>
         {product.badge && <em className="badge">{product.badge}</em>}
-        <img src={product.image} alt="" />
+        <img src={product.images[0]} alt="" />
         <h2>{product.name}</h2>
         <p>{product.detail}</p>
       </button>
       <div className="buy">
         <span>{money(product.price)}</span>
-        <button type="button" onClick={() => onAdd(product.id)}>
+        <button type="button" onClick={() => shop.add(product.id)}>
           Agregar
         </button>
       </div>
@@ -91,7 +135,359 @@ function ProductCard({ product, onOpen, onAdd }) {
   );
 }
 
-function Shop() {
+function Carousel() {
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    if (paused) return undefined;
+    const timer = setInterval(() => setIndex((current) => (current + 1) % SLIDES.length), 5000);
+    return () => clearInterval(timer);
+  }, [paused]);
+
+  const slide = SLIDES[index];
+
+  return (
+    <section
+      className="carousel"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      {SLIDES.map((item, itemIndex) => (
+        <article key={item.title} className={itemIndex === index ? "slide on" : "slide"}>
+          <img src={item.image} alt="" />
+        </article>
+      ))}
+      <div className="hero-copy">
+        <p className="eyebrow">{slide.kicker}</p>
+        <h1>{slide.title}</h1>
+        <Link className="solid" to={slide.to}>
+          Ver {slide.kicker.toLowerCase()}
+        </Link>
+      </div>
+      <div className="carousel-ui">
+        <button type="button" onClick={() => setIndex((current) => (current + SLIDES.length - 1) % SLIDES.length)}>
+          Anterior
+        </button>
+        <div className="dots">
+          {SLIDES.map((item, itemIndex) => (
+            <button
+              key={item.title}
+              type="button"
+              className={itemIndex === index ? "on" : ""}
+              aria-label={item.title}
+              onClick={() => setIndex(itemIndex)}
+            />
+          ))}
+        </div>
+        <button type="button" onClick={() => setIndex((current) => (current + 1) % SLIDES.length)}>
+          Siguiente
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function Home() {
+  return (
+    <>
+      <Carousel />
+      <section className="wrap categories">
+        {CATEGORIES.map((category) => (
+          <Link key={category.id} to={`/categoria/${category.id}`} className="category">
+            <strong>{category.name}</strong>
+            <span>{category.text}</span>
+          </Link>
+        ))}
+      </section>
+      <section className="wrap catalog">
+        <h2>Para todos los días</h2>
+        <div className="grid rest">
+          {PRODUCTS.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      </section>
+    </>
+  );
+}
+
+function CategoryPage() {
+  const { id } = useParams();
+  const category = categoryOf(id);
+  const products = PRODUCTS.filter((product) => product.category === id);
+  if (!category) {
+    return (
+      <section className="wrap catalog">
+        <h2>Esa categoría no está</h2>
+        <Link className="solid" to="/">
+          Volver al inicio
+        </Link>
+      </section>
+    );
+  }
+  return (
+    <section className="wrap catalog page-in">
+      <p className="eyebrow">Categoría</p>
+      <h2>{category.name}</h2>
+      <p className="lead">{category.text}</p>
+      <div className="grid rest">
+        {products.map((product) => (
+          <ProductCard key={product.id} product={product} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ProductPage() {
+  const { id } = useParams();
+  const shop = useShop();
+  const product = PRODUCTS.find((item) => item.id === id);
+  const [photo, setPhoto] = useState(0);
+  if (!product) {
+    return (
+      <section className="wrap catalog">
+        <h2>Ese producto no está</h2>
+        <Link className="solid" to="/">
+          Volver al inicio
+        </Link>
+      </section>
+    );
+  }
+  const category = categoryOf(product.category);
+  return (
+    <article className="wrap product-page page-in">
+      <Link className="crumb" to={category ? `/categoria/${category.id}` : "/"}>
+        ← {category?.name || "Inicio"}
+      </Link>
+      <div className="product-layout">
+        <div>
+          <img src={product.images[photo]} alt={product.name} />
+          {product.images.length > 1 && (
+            <div className="thumbs">
+              {product.images.map((image, index) => (
+                <button key={image} type="button" className={index === photo ? "on" : ""} onClick={() => setPhoto(index)}>
+                  <img src={image} alt="" />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <div className="product-copy">
+          <p className="eyebrow">{category?.name}</p>
+          <h1>{product.name}</h1>
+          <p className="detail-price">{money(product.price)}{product.badge ? ` · ${product.badge}` : ""}</p>
+          <p>{product.description}</p>
+          <ul className="specs">
+            {product.specs.map((spec) => (
+              <li key={spec}>{spec}</li>
+            ))}
+          </ul>
+          <button type="button" className="solid" onClick={() => shop.add(product.id)}>
+            Agregar al carrito
+          </button>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function Preview() {
+  const shop = useShop();
+  const product = shop.preview;
+  if (!product) return null;
+  return (
+    <div className="back" onClick={() => shop.setPreview(null)}>
+      <article className="detail" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+        <img src={product.images[0]} alt={product.name} />
+        <div className="detail-copy">
+          <button type="button" className="text" onClick={() => shop.setPreview(null)}>
+            Cerrar
+          </button>
+          <h2>{product.name}</h2>
+          <p className="detail-price">{money(product.price)}</p>
+          <p>{product.detail}</p>
+          <div className="actions-row">
+            <Link className="ghost" to={`/producto/${product.id}`} onClick={() => shop.setPreview(null)}>
+              Ver ficha
+            </Link>
+            <button
+              type="button"
+              className="solid"
+              onClick={() => {
+                shop.add(product.id);
+                shop.setPreview(null);
+              }}
+            >
+              Agregar
+            </button>
+          </div>
+        </div>
+      </article>
+    </div>
+  );
+}
+
+function Cart() {
+  const shop = useShop();
+  if (!shop.open) return null;
+  return (
+    <div className="back" onClick={shop.close}>
+      <aside className="drawer" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+        <header>
+          <h2>{shop.step === "done" ? "Pedido anotado" : "Carrito"}</h2>
+          <button type="button" onClick={shop.close}>
+            Cerrar
+          </button>
+        </header>
+        {shop.step === "list" && (
+          <div className="body">
+            {shop.items.length === 0 ? (
+              <p>Todavía no sumaste nada.</p>
+            ) : (
+              <>
+                <ul>
+                  {shop.items.map((line) => (
+                    <li key={line.id}>
+                      <div>
+                        <strong>
+                          {line.product.name}
+                          {line.product.badge ? ` · ${line.product.badge}` : ""}
+                        </strong>
+                        <span>{money(linePrice(line.product, line.qty))}</span>
+                      </div>
+                      <div className="qty">
+                        <button type="button" onClick={() => shop.setQty(line.id, line.qty - 1)} aria-label="Restar">
+                          −
+                        </button>
+                        <span>{line.qty}</span>
+                        <button type="button" onClick={() => shop.setQty(line.id, line.qty + 1)} aria-label="Sumar">
+                          +
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <p className="total">
+                  Total <strong>{money(shop.total)}</strong>
+                </p>
+                <p className="ship">
+                  {shop.shippingLeft === 0
+                    ? "Envío sin cargo"
+                    : `Te faltan ${money(shop.shippingLeft)} para el envío sin cargo`}
+                </p>
+                <button type="button" className="solid" onClick={() => shop.setStep("form")}>
+                  Cerrar pedido
+                </button>
+              </>
+            )}
+          </div>
+        )}
+        {shop.step === "form" && (
+          <form className="body" onSubmit={shop.submit}>
+            <label>
+              Nombre
+              <input value={shop.form.name} onChange={(event) => shop.setForm({ ...shop.form, name: event.target.value })} />
+            </label>
+            <label>
+              Email
+              <input
+                type="email"
+                value={shop.form.email}
+                onChange={(event) => shop.setForm({ ...shop.form, email: event.target.value })}
+              />
+            </label>
+            <label>
+              Ciudad
+              <input value={shop.form.city} onChange={(event) => shop.setForm({ ...shop.form, city: event.target.value })} />
+            </label>
+            <label>
+              Dirección
+              <input
+                value={shop.form.address}
+                onChange={(event) => shop.setForm({ ...shop.form, address: event.target.value })}
+              />
+            </label>
+            {shop.error && <p className="err">{shop.error}</p>}
+            <div className="actions-row">
+              <button type="button" className="ghost" onClick={() => shop.setStep("list")}>
+                Volver al carrito
+              </button>
+              <button className="solid" type="submit">
+                Confirmar · {money(shop.total)}
+              </button>
+            </div>
+          </form>
+        )}
+        {shop.step === "done" && shop.order && (
+          <div className="body">
+            <p className="code">{shop.order.code}</p>
+            <p>
+              {shop.order.name}, el pedido queda anotado para {shop.order.address}, {shop.order.city}.
+            </p>
+            <p>
+              Total <strong>{money(shop.order.total)}</strong>
+            </p>
+            <button type="button" className="solid" onClick={shop.close}>
+              Seguir mirando
+            </button>
+          </div>
+        )}
+      </aside>
+    </div>
+  );
+}
+
+function Frame() {
+  const shop = useShop();
+  return (
+    <>
+      <header className="bar">
+        <div className="wrap bar-inner">
+          <Link to="/" className="logo-link">
+            <img className="logo" src={asset("bazar/logo.png")} alt="Bazar Uno" />
+          </Link>
+          <nav className="cats" aria-label="Categorías">
+            {CATEGORIES.map((category) => (
+              <NavLink key={category.id} to={`/categoria/${category.id}`}>
+                {category.name}
+              </NavLink>
+            ))}
+          </nav>
+          <button type="button" className="bag" onClick={() => shop.setOpen(true)}>
+            Carrito <b>{shop.count}</b>
+          </button>
+        </div>
+      </header>
+      <main>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/categoria/:id" element={<CategoryPage />} />
+          <Route path="/producto/:id" element={<ProductPage />} />
+          <Route
+            path="*"
+            element={
+              <section className="wrap catalog">
+                <h2>Esa página no está</h2>
+                <Link className="solid" to="/">
+                  Volver al inicio
+                </Link>
+              </section>
+            }
+          />
+        </Routes>
+      </main>
+      <footer>
+        <div className="wrap">Desarrollado por ZigZag</div>
+      </footer>
+      <Preview />
+      <Cart />
+    </>
+  );
+}
+
+function ShopState({ children }) {
   const [lines, setLines] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem(CART_KEY) || "[]");
@@ -101,21 +497,21 @@ function Shop() {
   });
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState("list");
-  const [form, setForm] = useState({ name: "", email: "", city: "" });
+  const [form, setForm] = useState({ name: "", email: "", city: "", address: "" });
   const [error, setError] = useState("");
   const [order, setOrder] = useState(null);
-  const [selected, setSelected] = useState(null);
+  const [preview, setPreview] = useState(null);
 
   useEffect(() => {
     localStorage.setItem(CART_KEY, JSON.stringify(lines));
   }, [lines]);
 
   useEffect(() => {
-    if (!open && !selected) return undefined;
+    if (!open && !preview) return undefined;
     const onKey = (event) => {
       if (event.key !== "Escape") return;
-      if (selected) {
-        setSelected(null);
+      if (preview) {
+        setPreview(null);
         return;
       }
       setOpen(false);
@@ -127,7 +523,7 @@ function Shop() {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
     };
-  }, [open, selected]);
+  }, [open, preview]);
 
   const items = useMemo(
     () =>
@@ -138,7 +534,6 @@ function Shop() {
   );
   const count = items.reduce((sum, line) => sum + line.qty, 0);
   const total = items.reduce((sum, line) => sum + linePrice(line.product, line.qty), 0);
-  const shippingLeft = Math.max(0, 50000 - total);
 
   function add(id) {
     setLines((prev) => {
@@ -150,22 +545,10 @@ function Shop() {
     setStep("list");
   }
 
-  function setQty(id, qty) {
-    setLines((prev) => {
-      if (qty <= 0) return prev.filter((line) => line.id !== id);
-      return prev.map((line) => (line.id === id ? { ...line, qty } : line));
-    });
-  }
-
-  function close() {
-    setOpen(false);
-    if (step === "done") setStep("list");
-  }
-
   function submit(event) {
     event.preventDefault();
-    if (!form.name.trim() || !form.email.includes("@") || !form.city.trim()) {
-      setError("Completá nombre, un email válido y la ciudad.");
+    if (!form.name.trim() || !form.email.includes("@") || !form.city.trim() || !form.address.trim()) {
+      setError("Completá nombre, email, ciudad y dirección.");
       return;
     }
     setOrder({
@@ -175,237 +558,49 @@ function Shop() {
       ...form,
     });
     setLines([]);
-    setForm({ name: "", email: "", city: "" });
+    setForm({ name: "", email: "", city: "", address: "" });
     setError("");
     setStep("done");
   }
 
-  return (
-    <>
-      <header className="bar">
-        <div className="wrap bar-inner">
-          <img className="logo" src={asset("bazar/logo.jpg")} alt="Bazar Uno" />
-          <button type="button" className="bag" onClick={() => setOpen(true)}>
-            Carrito <b>{count}</b>
-          </button>
-        </div>
-      </header>
-      <main>
-        <section className="hero-banner">
-          <img src={asset("bazar/living.jpg")} alt="Living con objetos de uso diario" />
-          <div className="hero-copy">
-            <p className="eyebrow">Hogar</p>
-            <h1>Cosas simples para la casa</h1>
-            <a className="solid" href="#productos">
-              Ver productos
-            </a>
-          </div>
-        </section>
+  const value = {
+    items,
+    count,
+    total,
+    shippingLeft: Math.max(0, 50000 - total),
+    open,
+    setOpen,
+    step,
+    setStep,
+    form,
+    setForm,
+    error,
+    order,
+    preview,
+    setPreview,
+    add,
+    setQty(id, qty) {
+      setLines((prev) => {
+        if (qty <= 0) return prev.filter((line) => line.id !== id);
+        return prev.map((line) => (line.id === id ? { ...line, qty } : line));
+      });
+    },
+    close() {
+      setOpen(false);
+      if (step === "done") setStep("list");
+    },
+    submit,
+  };
 
-        <section className="promos wrap">
-          <button type="button" className="promo wide" onClick={() => setSelected(PRODUCTS[4])}>
-            <img src={asset("bazar/cocina.jpg")} alt="" />
-            <span>Promoción</span>
-            <strong>2x1 en el reloj de cocina</strong>
-          </button>
-          <article className="promo">
-            <img src={asset("bazar/entrada.jpg")} alt="" />
-            <span>Envío</span>
-            <strong>Sin cargo desde $50.000</strong>
-          </article>
-          <button type="button" className="promo" onClick={() => setSelected(PRODUCTS[1])}>
-            <img src={asset("bazar/escritorio.jpg")} alt="" />
-            <span>Escritorio</span>
-            <strong>Lámpara y auriculares</strong>
-          </button>
-        </section>
-
-        <section className="wrap catalog" id="productos">
-          <h2>Para todos los días</h2>
-          <div className="grid pair">
-            {PRODUCTS.slice(0, 2).map((product) => (
-              <ProductCard key={product.id} product={product} onOpen={setSelected} onAdd={add} />
-            ))}
-          </div>
-        </section>
-
-        <section className="band-banner">
-          <img src={asset("bazar/entrada.jpg")} alt="Mochila en la entrada de un departamento" />
-          <div>
-            <p className="eyebrow">Para salir</p>
-            <h2>La mochila que entra en el día</h2>
-            <button type="button" className="solid" onClick={() => setSelected(PRODUCTS[2])}>
-              Ver la mochila
-            </button>
-          </div>
-        </section>
-
-        <section className="wrap catalog">
-          <div className="grid rest">
-            {PRODUCTS.slice(2).map((product) => (
-              <ProductCard key={product.id} product={product} onOpen={setSelected} onAdd={add} />
-            ))}
-          </div>
-        </section>
-
-        <section className="band-banner flip">
-          <img src={asset("bazar/escritorio.jpg")} alt="Escritorio con lámpara y auriculares" />
-          <div>
-            <p className="eyebrow">En casa</p>
-            <h2>Un escritorio para quedarse</h2>
-            <button type="button" className="solid" onClick={() => setSelected(PRODUCTS[0])}>
-              Ver auriculares
-            </button>
-          </div>
-        </section>
-      </main>
-      <footer>
-        <div className="wrap">Desarrollado por ZigZag</div>
-      </footer>
-
-      {selected && (
-        <div className="back" onClick={() => setSelected(null)}>
-          <article
-            className="detail"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="product-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <img src={selected.image} alt={selected.name} />
-            <div className="detail-copy">
-              <button type="button" className="text" onClick={() => setSelected(null)}>
-                Cerrar
-              </button>
-              <h2 id="product-title">{selected.name}</h2>
-              <p className="detail-price">{money(selected.price)}</p>
-              <p>{selected.description}</p>
-              <ul className="specs">
-                {selected.specs.map((spec) => (
-                  <li key={spec}>{spec}</li>
-                ))}
-              </ul>
-              <button
-                type="button"
-                className="solid"
-                onClick={() => {
-                  add(selected.id);
-                  setSelected(null);
-                }}
-              >
-                Agregar al carrito
-              </button>
-            </div>
-          </article>
-        </div>
-      )}
-
-      {open && (
-        <div className="back" onClick={() => close()}>
-          <aside
-            className="drawer"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="cart-title"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <header>
-              <h2 id="cart-title">{step === "done" ? "Pedido anotado" : "Carrito"}</h2>
-              <button type="button" onClick={() => close()}>
-                Cerrar
-              </button>
-            </header>
-            {step === "list" && (
-              <div className="body">
-                {items.length === 0 ? (
-                  <p>Todavía no sumaste nada.</p>
-                ) : (
-                  <>
-                    <ul>
-                      {items.map((line) => (
-                        <li key={line.id}>
-                          <div>
-                            <strong>
-                              {line.product.name}
-                              {line.product.badge ? ` · ${line.product.badge}` : ""}
-                            </strong>
-                            <span>{money(linePrice(line.product, line.qty))}</span>
-                          </div>
-                          <div className="qty">
-                            <button type="button" onClick={() => setQty(line.id, line.qty - 1)} aria-label="Restar">
-                              −
-                            </button>
-                            <span>{line.qty}</span>
-                            <button type="button" onClick={() => setQty(line.id, line.qty + 1)} aria-label="Sumar">
-                              +
-                            </button>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="total">
-                      Total <strong>{money(total)}</strong>
-                    </p>
-                    <p className="ship">
-                      {shippingLeft === 0
-                        ? "Envío sin cargo"
-                        : `Te faltan ${money(shippingLeft)} para el envío sin cargo`}
-                    </p>
-                    <button type="button" className="solid" onClick={() => setStep("form")}>
-                      Cerrar pedido
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-            {step === "form" && (
-              <form className="body" onSubmit={submit}>
-                <label>
-                  Nombre
-                  <input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
-                </label>
-                <label>
-                  Email
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={(event) => setForm({ ...form, email: event.target.value })}
-                  />
-                </label>
-                <label>
-                  Ciudad
-                  <input value={form.city} onChange={(event) => setForm({ ...form, city: event.target.value })} />
-                </label>
-                {error && <p className="err">{error}</p>}
-                <button type="button" onClick={() => setStep("list")}>
-                  Volver
-                </button>
-                <button className="solid" type="submit">
-                  Confirmar · {money(total)}
-                </button>
-              </form>
-            )}
-            {step === "done" && order && (
-              <div className="body">
-                <p className="code">{order.code}</p>
-                <p>{order.name}, tu pedido quedó anotado para {order.city}.</p>
-                <p>
-                  Total <strong>{money(order.total)}</strong>
-                </p>
-                <button type="button" className="solid" onClick={() => close()}>
-                  Seguir mirando
-                </button>
-              </div>
-            )}
-          </aside>
-        </div>
-      )}
-    </>
-  );
+  return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;
 }
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <Shop />
+    <HashRouter>
+      <ShopState>
+        <Frame />
+      </ShopState>
+    </HashRouter>
   </StrictMode>,
 );

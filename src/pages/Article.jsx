@@ -1,6 +1,7 @@
 import { Link, useParams } from "react-router-dom";
 import { useEffect } from "react";
 import { Accent } from "../components/Accent";
+import { ProjectMedia } from "../components/ProjectMedia";
 import { formatDate, paragraphs, plainTitle } from "../lib/format";
 import { useCms } from "../state/store";
 
@@ -19,8 +20,8 @@ export function Article() {
       <div className="wrap article">
         <p className="kicker">Estudio</p>
         <h1>Esa publicación no está</h1>
-        <Link className="btn" to="/">
-          Volver al estudio
+        <Link className="btn" to="/portfolio">
+          Volver al portfolio
         </Link>
       </div>
     );
@@ -28,8 +29,8 @@ export function Article() {
 
   return (
     <article className="wrap article">
-      <Link className="back" to={section ? `/?seccion=${section.id}` : "/"}>
-        ← {section?.name || "Estudio"}
+      <Link className="back" to={section ? `/portfolio?seccion=${section.id}` : "/portfolio"}>
+        ← {section?.name || "Portfolio"}
       </Link>
       <p className="kicker">{section?.name}</p>
       <h1>
@@ -43,6 +44,13 @@ export function Article() {
           <span className="sq-red" aria-hidden="true" />
           <img src={post.image} alt="" />
         </figure>
+      )}
+      {(post.files || []).length > 0 && (
+        <div className="project-files">
+          {post.files.map((file) => (
+            <ProjectMedia key={file.id} file={file} />
+          ))}
+        </div>
       )}
       {paragraphs(post.body).map((part, index) => (
         <p key={`${post.id}-${index}`}>{part}</p>

@@ -8,8 +8,10 @@ export function Shell() {
   const isPanel = pathname.startsWith("/panel");
 
   useEffect(() => {
-    if (pathname.startsWith("/nota/")) return;
-    document.title = isPanel ? "ZigZag — Panel" : "ZigZag — Estudio";
+    if (pathname.startsWith("/nota/") || pathname.startsWith("/proyecto/")) return;
+    if (isPanel) document.title = "ZigZag — Panel";
+    else if (pathname.startsWith("/portfolio")) document.title = "ZigZag — Portfolio";
+    else document.title = "ZigZag — Estudio";
   }, [pathname, isPanel]);
 
   return (
@@ -25,6 +27,7 @@ export function Shell() {
             <NavLink to="/" end>
               Estudio
             </NavLink>
+            <NavLink to="/portfolio">Portfolio</NavLink>
             <NavLink to="/panel">Panel</NavLink>
           </nav>
         </div>

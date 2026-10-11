@@ -17,33 +17,101 @@ body {
   color: var(--ink);
 }
 h1, h2, p { margin: 0; }
+a { color: inherit; }
 button, input { font: inherit; }
 button { cursor: pointer; }
 
 .wrap { width: min(1080px, calc(100% - 40px)); margin: 0 auto; }
-.bar { background: var(--paper); border-bottom: 1px solid rgba(28, 27, 25, 0.08); }
-.bar-inner { min-height: 72px; display: flex; align-items: center; justify-content: space-between; }
-.bar strong { font-size: 22px; letter-spacing: -0.03em; }
-.logo { height: 96px; width: auto; display: block; }
+.bar { background: white; border-bottom: 1px solid rgba(28, 27, 25, 0.08); position: sticky; top: 0; z-index: 4; }
+.bar-inner { min-height: 76px; display: flex; align-items: center; gap: 18px; }
+.logo-link { display: flex; }
+.logo { height: 56px; width: auto; display: block; }
+.cats { display: flex; gap: 16px; margin-left: auto; }
+.cats a { text-decoration: none; font-weight: 600; }
+.cats a.active { color: var(--green); }
 .bag { border: 0; background: var(--ink); color: white; border-radius: 999px; padding: 10px 14px; font-weight: 600; }
 .bag b { display: inline-grid; place-items: center; min-width: 22px; height: 22px; margin-left: 6px; border-radius: 99px; background: #d7f3e4; color: var(--ink); }
 
 main { padding: 0 0 48px; }
-.hero-banner { position: relative; margin-bottom: 28px; }
-.hero-banner img { width: 100%; height: min(520px, 68vw); object-fit: cover; display: block; }
+.carousel {
+  position: relative;
+  height: min(560px, 70vw);
+  min-height: 420px;
+  overflow: hidden;
+  background: #1c1b19;
+  margin-bottom: 28px;
+}
+.slide { position: absolute; inset: 0; opacity: 0; transition: opacity 0.6s ease; }
+.slide.on { opacity: 1; }
+.slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .hero-copy {
   position: absolute;
-  left: max(20px, 6vw);
-  bottom: 12%;
+  z-index: 2;
+  left: max(20px, 5vw);
+  bottom: 18%;
   display: grid;
   gap: 12px;
   justify-items: start;
-  max-width: 18ch;
+  max-width: min(380px, calc(100% - 40px));
+  padding: 22px;
+  border-radius: 18px;
+  background: rgba(28, 27, 25, 0.78);
   color: white;
 }
-.hero-copy h1 { color: white; text-shadow: 0 8px 24px rgba(0, 0, 0, 0.35); }
-.hero-copy .eyebrow { color: white; }
-.hero-copy .solid, .band-banner .solid { text-decoration: none; }
+.hero-copy h1 { color: white; margin: 0; max-width: none; font-size: clamp(32px, 4vw, 52px); text-shadow: none; }
+.hero-copy .eyebrow { color: #d7f3e4; }
+.hero-copy .solid, .band-banner .solid, .ghost { text-decoration: none; }
+.carousel-ui {
+  position: absolute;
+  z-index: 2;
+  right: max(16px, 4vw);
+  bottom: 22px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.carousel-ui button, .ghost {
+  border: 0;
+  background: white;
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-weight: 600;
+}
+.dots { display: flex; gap: 6px; }
+.dots button { width: 10px; height: 10px; padding: 0; border-radius: 99px; background: rgba(255, 255, 255, 0.55); }
+.dots button.on { background: white; }
+.categories { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+.category {
+  display: grid;
+  gap: 6px;
+  background: white;
+  border-radius: 16px;
+  padding: 16px;
+  text-decoration: none;
+  transition: transform 0.25s ease;
+}
+.category:hover { transform: translateY(-4px); }
+.category span { color: var(--muted); }
+.page-in { animation: rise 0.45s ease both; }
+.product-page { padding-top: 28px; }
+.crumb { font-weight: 700; text-decoration: none; }
+.product-layout { margin-top: 18px; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 28px; align-items: start; }
+.product-layout > div > img {
+  width: 100%;
+  max-height: 520px;
+  object-fit: contain;
+  border-radius: 18px;
+  background: #f3efe8;
+}
+.product-copy { display: grid; gap: 12px; justify-items: start; }
+.product-copy h1 { margin: 0; max-width: none; }
+.thumbs { display: flex; gap: 8px; margin-top: 10px; }
+.thumbs button { border: 2px solid transparent; padding: 0; border-radius: 12px; background: transparent; }
+.thumbs button.on { border-color: var(--green); }
+.thumbs img { width: 84px; height: 64px; object-fit: cover; border-radius: 10px; }
+.actions-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.ghost { border: 1.5px solid var(--ink); background: white; }
 
 .promos { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 14px; margin-bottom: 36px; }
 .promo {
@@ -94,7 +162,8 @@ button.promo { cursor: pointer; }
   padding: 6px 8px;
   border-radius: 999px;
 }
-.card { position: relative; }
+.card { position: relative; transition: transform 0.25s ease; }
+.card:hover { transform: translateY(-4px); }
 
 .band-banner {
   margin: 36px 0;
@@ -196,6 +265,7 @@ footer { padding: 0 0 32px; color: var(--muted); }
   z-index: 6;
   display: flex;
   flex-direction: column;
+  animation: drawer-in 0.28s ease;
 }
 .drawer header, .body { padding: 18px; }
 .drawer header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(28, 27, 25, 0.1); }
@@ -213,9 +283,26 @@ input { border: 1px solid rgba(28, 27, 25, 0.2); border-radius: 10px; padding: 1
 
 :focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
 
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes drawer-in {
+  from { transform: translateX(28px); }
+  to { transform: none; }
+}
+.detail { animation: rise 0.28s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
 @media (max-width: 800px) {
-  .grid, .grid.pair, .grid.rest, .promos, .band-banner, .band-banner.flip { grid-template-columns: 1fr; }
+  .grid, .grid.pair, .grid.rest, .promos, .band-banner, .band-banner.flip, .categories, .product-layout { grid-template-columns: 1fr; }
   .card, .card:nth-child(n) { grid-column: auto; }
   .band-banner.flip img { order: 0; }
-  .hero-copy h1 { font-size: 36px; }
+  .hero-copy h1 { font-size: 32px; }
+  .bar-inner { flex-wrap: wrap; padding: 10px 0; }
+  .cats { margin-left: 0; width: 100%; order: 3; }
+  .carousel { min-height: 460px; height: 78vw; }
 }

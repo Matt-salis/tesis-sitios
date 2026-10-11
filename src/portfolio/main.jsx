@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { HashRouter, Route, Routes } from "react-router-dom";
 import { Shell } from "../components/Shell";
 import { Article } from "../pages/Article";
+import { Home } from "../pages/Home";
 import { Missing } from "../pages/Missing";
 import { Panel } from "../pages/Panel";
 import { Studio } from "../pages/Studio";
@@ -15,7 +16,9 @@ createRoot(document.getElementById("root")).render(
       <AppState>
         <Routes>
           <Route element={<Shell />}>
-            <Route path="/" element={<Studio />} />
+            <Route path="/" element={<Home />} />
+            <Route path="/portfolio" element={<Studio />} />
+            <Route path="/proyecto/:postId" element={<Article />} />
             <Route path="/nota/:postId" element={<Article />} />
             <Route path="/panel" element={<Panel />} />
             <Route path="*" element={<Missing />} />
