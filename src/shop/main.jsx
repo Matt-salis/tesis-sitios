@@ -107,6 +107,48 @@ function linePrice(product, qty) {
   return product.price * qty;
 }
 
+function cardDigits(value) {
+  return value.replace(/\D/g, "");
+}
+
+function luhn(value) {
+  const digits = cardDigits(value);
+  if (digits.length < 15 || digits.length > 16) return false;
+  let sum = 0;
+  let alt = false;
+  for (let index = digits.length - 1; index >= 0; index -= 1) {
+    let digit = Number(digits[index]);
+    if (alt) {
+      digit *= 2;
+      if (digit > 9) digit -= 9;
+    }
+    sum += digit;
+    alt = !alt;
+  }
+  return sum % 10 === 0;
+}
+
+function formatCard(value) {
+  return cardDigits(value)
+    .slice(0, 16)
+    .replace(/(\d{4})(?=\d)/g, "$1 ");
+}
+
+function formatExpiry(value) {
+  const digits = value.replace(/\D/g, "").slice(0, 4);
+  if (digits.length < 3) return digits;
+  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
+}
+
+function expiryOk(value) {
+  const match = /^(\d{2})\/(\d{2})$/.exec(value);
+  if (!match) return false;
+  const month = Number(match[1]);
+  const year = 2000 + Number(match[2]);
+  if (month < 1 || month > 12) return false;
+  return new Date(year, month, 1) > new Date();
+}
+
 function categoryOf(id) {
   return CATEGORIES.find((item) => item.id === id);
 }
@@ -329,14 +371,157 @@ function Preview() {
   );
 }
 
+function MercadoPago() {
+  const shop = useShop();
+  const [method, setMethod] = useState("credit");
+  const [installments, setInstallments] = useState(1);
+  const [card, setCard] = useState({ number: "", name: "", expiry: "", cvv: "" });
+  const [paying, setPaying] = useState(false);
+  const [payError, setPayError] = useState("");
+  const quota = method === "credit" ? installments : 1;
+  const each = Math.ceil(shop.total / quota);
+
+  function pay(event) {
+    event.preventDefault();
+    if (paying) return;
+    const digits = cardDigits(card.number);
+    if (method !== "wallet") {
+      if (!luhn(digits)) {
+        setPayError("Revisá el número de la tarjeta.");
+        return;
+      }
+      if (!card.name.trim()) {
+        setPayError("Completá el nombre como figura en la tarjeta.");
+        return;
+      }
+      if (!expiryOk(card.expiry)) {
+        setPayError("Revisá el vencimiento.");
+        return;
+      }
+      if (!/^\d{3,4}$/.test(card.cvv)) {
+        setPayError("Revisá el código de seguridad.");
+        return;
+      }
+    }
+    setPayError("");
+    setPaying(true);
+    window.setTimeout(() => {
+      const rejected = method !== "wallet" && (digits.endsWith("0000") || card.cvv === "000");
+      if (rejected) {
+        setPaying(false);
+        setPayError("Mercado Pago rechazó el pago. Probá con otro medio.");
+        return;
+      }
+      shop.finishPayment({
+        method: method === "wallet" ? "Dinero en Mercado Pago" : method === "debit" ? "Débito" : "Crédito",
+        last4: method === "wallet" ? "" : digits.slice(-4),
+        installments: quota,
+        paymentId: String(Math.floor(1000000000 + Math.random() * 9000000000)),
+      });
+    }, 1400);
+  }
+
+  return (
+    <form className="body mp" onSubmit={pay}>
+      <p className="mp-brand">Mercado Pago</p>
+      <p className="mp-amount">
+        {money(shop.total)}
+        {quota > 1 && <span> en {quota} cuotas de {money(each)}</span>}
+      </p>
+      <div className="mp-methods" role="radiogroup" aria-label="Medio de pago">
+        {[
+          ["credit", "Tarjeta de crédito"],
+          ["debit", "Tarjeta de débito"],
+          ["wallet", "Dinero en Mercado Pago"],
+        ].map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            className={method === id ? "on" : ""}
+            onClick={() => setMethod(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      {method === "wallet" ? (
+        <p className="ship">Se descuenta del saldo de la cuenta.</p>
+      ) : (
+        <>
+          <label>
+            Número de tarjeta
+            <input
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="4509 9535 6623 3704"
+              value={card.number}
+              onChange={(event) => setCard({ ...card, number: formatCard(event.target.value) })}
+            />
+          </label>
+          <label>
+            Nombre en la tarjeta
+            <input
+              autoComplete="off"
+              value={card.name}
+              onChange={(event) => setCard({ ...card, name: event.target.value })}
+            />
+          </label>
+          <div className="mp-row">
+            <label>
+              Vencimiento
+              <input
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="MM/AA"
+                value={card.expiry}
+                onChange={(event) => setCard({ ...card, expiry: formatExpiry(event.target.value) })}
+              />
+            </label>
+            <label>
+              Código
+              <input
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder="123"
+                value={card.cvv}
+                onChange={(event) => setCard({ ...card, cvv: event.target.value.replace(/\D/g, "").slice(0, 4) })}
+              />
+            </label>
+          </div>
+          {method === "credit" && (
+            <label>
+              Cuotas
+              <select value={installments} onChange={(event) => setInstallments(Number(event.target.value))}>
+                <option value={1}>1 pago de {money(shop.total)}</option>
+                <option value={3}>3 cuotas de {money(Math.ceil(shop.total / 3))}</option>
+                <option value={6}>6 cuotas de {money(Math.ceil(shop.total / 6))}</option>
+              </select>
+            </label>
+          )}
+          <p className="quiet">El código 000 simula un rechazo de Mercado Pago.</p>
+        </>
+      )}
+      {payError && <p className="err">{payError}</p>}
+      <div className="actions-row">
+        <button type="button" className="ghost" onClick={() => shop.setStep("form")} disabled={paying}>
+          Volver a los datos
+        </button>
+        <button className="mp-pay" type="submit" disabled={paying}>
+          {paying ? "Procesando…" : `Pagar ${money(quota > 1 ? each : shop.total)}`}
+        </button>
+      </div>
+    </form>
+  );
+}
+
 function Cart() {
   const shop = useShop();
   if (!shop.open) return null;
   return (
     <div className="back" onClick={shop.close}>
-      <aside className="drawer" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+      <aside className={shop.step === "pay" ? "drawer pay" : "drawer"} role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
         <header>
-          <h2>{shop.step === "done" ? "Pedido anotado" : "Carrito"}</h2>
+          <h2>{shop.step === "done" ? "Pago aprobado" : shop.step === "pay" ? "Pago" : "Carrito"}</h2>
           <button type="button" onClick={shop.close}>
             Cerrar
           </button>
@@ -415,20 +600,28 @@ function Cart() {
                 Volver al carrito
               </button>
               <button className="solid" type="submit">
-                Confirmar · {money(shop.total)}
+                Continuar al pago
               </button>
             </div>
           </form>
         )}
+        {shop.step === "pay" && <MercadoPago />}
         {shop.step === "done" && shop.order && (
           <div className="body">
+            <p className="mp-brand">Mercado Pago</p>
             <p className="code">{shop.order.code}</p>
             <p>
-              {shop.order.name}, el pedido queda anotado para {shop.order.address}, {shop.order.city}.
+              {shop.order.name}, el cobro quedó acreditado. El envío va a {shop.order.address}, {shop.order.city}.
+            </p>
+            <p>
+              {shop.order.payment.method}
+              {shop.order.payment.last4 ? ` · **** ${shop.order.payment.last4}` : ""}
+              {shop.order.payment.installments > 1 ? ` · ${shop.order.payment.installments} cuotas` : ""}
             </p>
             <p>
               Total <strong>{money(shop.order.total)}</strong>
             </p>
+            <p className="quiet">Operación {shop.order.payment.paymentId}</p>
             <button type="button" className="solid" onClick={shop.close}>
               Seguir mirando
             </button>
@@ -551,11 +744,17 @@ function ShopState({ children }) {
       setError("Completá nombre, email, ciudad y dirección.");
       return;
     }
+    setError("");
+    setStep("pay");
+  }
+
+  function finishPayment(payment) {
     setOrder({
       code: `BU-${Math.floor(1000 + Math.random() * 9000)}`,
       items,
       total,
       ...form,
+      payment,
     });
     setLines([]);
     setForm({ name: "", email: "", city: "", address: "" });
@@ -590,6 +789,7 @@ function ShopState({ children }) {
       if (step === "done") setStep("list");
     },
     submit,
+    finishPayment,
   };
 
   return <ShopContext.Provider value={value}>{children}</ShopContext.Provider>;
