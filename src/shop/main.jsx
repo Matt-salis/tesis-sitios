@@ -498,7 +498,6 @@ function MercadoPago() {
               </select>
             </label>
           )}
-          <p className="quiet">El código 000 simula un rechazo de Mercado Pago.</p>
         </>
       )}
       {payError && <p className="err">{payError}</p>}
